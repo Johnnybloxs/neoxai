@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeoXAI</title>
+<style>
+:root{--bg:#000;--fg:#fff;--dim:color-mix(in srgb,var(--fg) 55%,transparent);--line:color-mix(in srgb,var(--fg) 22%,transparent);--glass:color-mix(in srgb,var(--bg) 62%,transparent);--bubble:color-mix(in srgb,var(--fg) 7%,transparent)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden;transition:background .4s,color .4s}
+#bg{position:fixed;inset:0;z-index:0}
+.wrap{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;max-width:860px;width:100%;margin:0 auto}
+header{display:flex;align-items:center;gap:8px;padding:16px 20px;flex-wrap:wrap}
+h1{font-size:20px;margin:0;letter-spacing:7px;font-weight:300}
+h1 b{font-weight:800}
+.sp{flex:1}
+button,select,input,textarea{font:inherit;color:var(--fg)}
+.btn{background:var(--glass);border:1px solid var(--line);padding:7px 12px;cursor:pointer;font-size:12px;letter-spacing:1px;text-transform:uppercase;backdrop-filter:blur(8px)}
+.btn:hover,.btn.on{border-color:var(--fg)}
+main{flex:1;overflow-y:auto;padding:10px 20px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
+.hero{margin:auto;text-align:center}
+.hero h2{font-size:clamp(34px,8vw,64px);font-weight:200;letter-spacing:14px;margin:0 0 10px;text-shadow:0 0 30px var(--dim)}
+.hero h2 b{font-weight:800}
+.hero p{color:var(--dim);letter-spacing:3px;font-size:12px;text-transform:uppercase;margin:0 0 24px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{background:var(--glass);border:1px solid var(--line);padding:9px 14px;cursor:pointer;font-size:13px;backdrop-filter:blur(8px)}
+.chip:hover{border-color:var(--fg)}
+.msg{max-width:88%;padding:12px 16px;line-height:1.6;white-space:pre-wrap;word-wrap:break-word;backdrop-filter:blur(10px)}
+.msg.user{align-self:flex-end;background:var(--fg);color:var(--bg)}
+.msg.bot{align-self:flex-start;background:var(--glass);border:1px solid var(--line)}
+.msg.err{border-color:#f55;color:#f77}
+footer{padding:10px 20px 18px}
+.bar{display:flex;gap:8px;align-items:flex-end;background:var(--glass);border:1px solid var(--line);padding:8px;backdrop-filter:blur(12px)}
+.bar:focus-within{border-color:var(--fg);box-shadow:0 0 24px var(--line)}
+textarea{flex:1;background:none;border:0;outline:0;resize:none;padding:8px;max-height:140px}
+.send{background:var(--fg);color:var(--bg);border:0;width:42px;height:42px;cursor:pointer;font-size:18px}
+.send:disabled{opacity:.4}
+dialog{background:var(--bg);color:var(--fg);border:1px solid var(--fg);padding:22px;width:min(460px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+dialog h3{margin:0 0 14px;letter-spacing:4px;font-weight:300;text-transform:uppercase}
+label{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin:14px 0 6px}
+dialog input,dialog select,dialog textarea{width:100%;background:var(--bubble);border:1px solid var(--line);padding:9px}
+dialog input[type=color]{height:42px;padding:3px;cursor:pointer}
+dialog option{background:var(--bg)}
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+small{color:var(--dim);display:block;margin-top:6px;line-height:1.4}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="wrap">
+  <header>
+    <h1><b>NEO</b>X<b>AI</b></h1>
+    <div class="sp"></div>
+    <button class="btn" id="themes">Themes</button>
+    <button class="btn" id="settings">Settings</button>
+    <button class="btn" id="clear">New</button>
+  </header>
+  <main id="chat">
+    <div class="hero" id="hero">
+      <h2><b>NEO</b>X<b>AI</b></h2>
+      <p>Your own intelligence. Your own machine.</p>
+      <div class="chips">
+        <button class="chip">Who is Johnny Jiang</button>
+        <button class="chip">Wrtie me an essay</button>
+        <button class="chip">What is NeoXAI?</button>
+      </div>
+    </div>
+  </main>
+  <footer>
+    <div class="bar">
+      <textarea id="in" rows="1" placeholder="Ask NeoXAI…"></textarea>
+      <button class="send" id="send">➤</button>
+    </div>
+  </footer>
+</div>
+
+<dialog id="tdlg">
+  <h3>Themes</h3>
+  <div class="themes" id="tgrid">
+    <button class="btn" data-t="neo">Neo</button>
+    <button class="btn" data-t="light">Neo Light</button>
+    <button class="btn" data-t="space">Space</button>
+    <button class="btn" data-t="kawaii">Kawaii</button>
+    <button class="btn" data-t="nothing">Nothing</button>
+    <button class="btn" data-t="emoji">Emoji</button>
+    <button class="btn" data-t="color">Color</button>
+  </div>
+  <label>Your emojis (Emoji theme)</label>
+  <input id="emo" placeholder="😛😭😄">
+  <label>Your color (Color and Emoji themes)</label>
+  <input id="col" type="color">
+  <div class="row"><button class="btn" id="tclose">Done</button></div>
+</dialog>
+
+<dialog id="dlg">
+  <h3>Model setup</h3>
+  <label>Backend type</label>
+  <select id="type"><option value="server">NeoXAI server (default)</option><option value="ollama">Ollama (local)</option><option value="openai">OpenAI-compatible (LM Studio, vLLM, llama.cpp…)</option></select>
+  <label>Server URL</label><input id="url">
+  <label>Model name</label><input id="model" placeholder="llama3.2">
+  <label>API key (optional)</label><input id="key" type="password">
+  <label>System prompt</label><textarea id="sys" rows="3"></textarea>
+  <small>Everything runs against the server you enter here. No third-party AI service is used. Allow CORS on your server (Ollama: set OLLAMA_ORIGINS=*).</small>
+  <div class="row"><button class="btn" id="cancel">Cancel</button><button class="btn" id="save">Save</button></div>
+</dialog>
+
+<script>
+const $ = id => document.getElementById(id);
+const chat=$('chat'), inp=$('in'), sendBtn=$('send'), dlg=$('dlg'), tdlg=$('tdlg');
+const DEF = {type:'server', url:'', model:'llama3.2', key:'',
+  sys:'You are NeoXAI, a sharp, friendly and honest AI assistant. Be clear and concise. NeoXAI was created by Johnny Jiang; if asked who created NeoXAI, say Johnny Jiang.'};
+let cfg={...DEF}, th={theme:'neo', emoji:'😛😭😄', color:'#1a1a2e'};
+try{ cfg={...DEF,...JSON.parse(localStorage.getItem('neoxai')||'{}')}; th={...th,...JSON.parse(localStorage.getItem('neoxai-theme')||'{}')}; }catch(e){}
+let history=[], busy=false, ctrl=null;
+
+/* ---------- settings ---------- */
+$('settings').onclick=()=>{ for(const k of ['type','url','model','key','sys']) $(k).value=cfg[k]; dlg.showModal(); };
+$('cancel').onclick=()=>dlg.close();
+$('type').onchange=()=>{ const v=$('type').value; $('url').value=v==='server'?'':v==='ollama'?'http://localhost:11434':'http://localhost:1234'; };
+$('save').onclick=()=>{ for(const k of ['type','url','model','key','sys']) cfg[k]=$(k).value.trim();
+  try{localStorage.setItem('neoxai',JSON.stringify(cfg));}catch(e){} dlg.close(); };
+$('clear').onclick=()=>{ if(ctrl) ctrl.abort(); location.reload(); };
+
+/* ---------- themes ---------- */
+const PRESET={neo:['#000000','#ffffff'],light:['#ffffff','#000000'],space:['#04040f','#e8eeff'],
+  kawaii:['#ffdcee','#7a2e5c'],nothing:['#f3f3f3','#111111']};
+let rgb=[255,255,255];
+const hex2rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+function lum(h){const [r,g,b]=hex2rgb(h);return (0.299*r+0.587*g+0.114*b)/255;}
+function applyTheme(){
+  let [bg,fg]=PRESET[th.theme]||[th.color, lum(th.color)>.55?'#000000':'#ffffff'];
+  document.documentElement.style.setProperty('--bg',bg);
+  document.documentElement.style.setProperty('--fg',fg);
+  rgb=hex2rgb(fg); initBg();
+  document.querySelectorAll('#tgrid .btn').forEach(b=>b.classList.toggle('on',b.dataset.t===th.theme));
+  try{localStorage.setItem('neoxai-theme',JSON.stringify(th));}catch(e){}
+}
+$('themes').onclick=()=>{ $('emo').value=th.emoji; $('col').value=th.color; applyTheme(); tdlg.showModal(); };
+$('tclose').onclick=()=>tdlg.close();
+$('tgrid').onclick=e=>{ const t=e.target.closest('[data-t]'); if(t){ th.theme=t.dataset.t; applyTheme(); } };
+$('emo').oninput=()=>{ th.emoji=$('emo').value||'🙂'; th.theme='emoji'; applyTheme(); };
+$('col').oninput=()=>{ th.color=$('col').value; if(th.theme!=='emoji') th.theme='color'; applyTheme(); };
+
+/* ---------- chat ---------- */
+function add(role,text){ const h=$('hero'); if(h) h.remove();
+  const d=document.createElement('div'); d.className='msg '+role; d.textContent=text;
+  chat.appendChild(d); chat.scrollTop=chat.scrollHeight; return d; }
+async function send(text){
+  text=(text||inp.value).trim(); if(!text||busy) return;
+  inp.value=''; inp.style.height='auto'; busy=true; sendBtn.disabled=true;
+  history.push({role:'user',content:text}); add('user',text);
+  const b=add('bot','…'); let out='';
+  const msgs=[{role:'system',content:cfg.sys},...history], base=cfg.url.replace(/\/$/,'');
+  try{
+    ctrl=new AbortController(); const ollama=cfg.type==='ollama', server=cfg.type==='server';
+    const res=await fetch(server?'/api/chat':base+(ollama?'/api/chat':'/v1/chat/completions'),{method:'POST',signal:ctrl.signal,
+      headers:{'Content-Type':'application/json',...(cfg.key?{Authorization:'Bearer '+cfg.key}:{})},
+      body:JSON.stringify(server?{messages:history}:{model:cfg.model,messages:msgs,stream:true})});
+    if(!res.ok) throw new Error('Server returned '+res.status);
+    const rd=res.body.getReader(), dec=new TextDecoder(); let buf='';
+    while(true){
+      const {done,value}=await rd.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true}); const lines=buf.split('\n'); buf=lines.pop();
+      for(let l of lines){ l=l.trim(); if(!l) continue;
+        if(!ollama){ if(!l.startsWith('data:')) continue; l=l.slice(5).trim(); if(l==='[DONE]') continue; }
+        try{ const j=JSON.parse(l); out+=ollama?(j.message?.content||''):(j.choices?.[0]?.delta?.content||'');
+          b.textContent=out||'…'; chat.scrollTop=chat.scrollHeight; }catch(e){} }
+    }
+    history.push({role:'assistant',content:out});
+  }catch(e){
+    history.pop(); b.classList.add('err');
+    b.textContent=cfg.type==='server'?'Could not reach the NeoXAI server. Make sure server.js is running and you opened the page at its address (for example http://localhost:3000).\n('+e.message+')':'Could not reach your model at '+cfg.url+'. Check Settings.\n('+e.message+')';
+  }
+  busy=false; sendBtn.disabled=false; inp.focus();
+}
+sendBtn.onclick=()=>send();
+inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} });
+inp.addEventListener('input',()=>{ inp.style.height='auto'; inp.style.height=inp.scrollHeight+'px'; });
+document.querySelectorAll('.chip').forEach(c=>c.onclick=()=>send(c.textContent));
+
+/* ---------- animated backgrounds ---------- */
+const cv=$('bg'), g=cv.getContext('2d'); let W,H,pts=[],stars=[],fl=[],mx=-999,my=-999,t=0;
+const ink=a=>`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+function glyphs(s){ try{ return [...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(s)].map(x=>x.segment).filter(x=>x.trim()); }catch(e){ return Array.from(s).filter(x=>x.trim()); } }
+function initBg(){
+  W=cv.width=innerWidth; H=cv.height=innerHeight; const T=th.theme;
+  pts=Array.from({length:Math.min(110,Math.floor(W*H/14000))},()=>({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4}));
+  stars=Array.from({length:260},()=>({x:(Math.random()-.5)*W*2,y:(Math.random()-.5)*H*2,z:Math.random()*W,s:Math.random()}));
+  const set=T==='kawaii'?['🌸','⭐','💖','☁️','🎀','🍓','✨','🦄']:glyphs(th.emoji);
+  fl=Array.from({length:T==='kawaii'?38:30},()=>({e:set[Math.floor(Math.random()*set.length)]||'🙂',x:Math.random()*W,y:Math.random()*H,
+    v:.3+Math.random()*.9,sz:18+Math.random()*34,ph:Math.random()*6.3,sw:.4+Math.random()*.8}));
+}
+addEventListener('resize',initBg);
+addEventListener('pointermove',e=>{mx=e.clientX;my=e.clientY;});
+
+function neo(){
+  const hz=H*.62; g.lineWidth=1; g.strokeStyle=ink(.10);
+  for(let i=-20;i<=20;i++){ g.beginPath(); g.moveTo(W/2+i*18,hz); g.lineTo(W/2+i*W*.14,H); g.stroke(); }
+  for(let i=0;i<14;i++){ const p=((i+t*3)%14)/14,y=hz+(H-hz)*p*p; g.strokeStyle=ink(.12*p+.02); g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke(); }
+  const gr=g.createLinearGradient(0,hz-60,0,hz+20); gr.addColorStop(0,ink(0)); gr.addColorStop(1,ink(.10)); g.fillStyle=gr; g.fillRect(0,hz-60,W,80);
+  for(const p of pts){ p.x+=p.vx; p.y+=p.vy; if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1; g.fillStyle=ink(.7); g.beginPath(); g.arc(p.x,p.y,1.6,0,6.3); g.fill(); }
+  for(let i=0;i<pts.length;i++){ for(let j=i+1;j<pts.length;j++){ const a=pts[i],b=pts[j],d=Math.hypot(a.x-b.x,a.y-b.y);
+    if(d<130){ g.strokeStyle=ink(.22*(1-d/130)); g.beginPath(); g.moveTo(a.x,a.y); g.lineTo(b.x,b.y); g.stroke(); } }
+    const dm=Math.hypot(pts[i].x-mx,pts[i].y-my);
+    if(dm<170){ g.strokeStyle=ink(.5*(1-dm/170)); g.beginPath(); g.moveTo(pts[i].x,pts[i].y); g.lineTo(mx,my); g.stroke(); } }
+}
+function space(){
+  const n1=g.createRadialGradient(W*.25,H*.3,0,W*.25,H*.3,W*.5); n1.addColorStop(0,'rgba(110,60,220,.28)'); n1.addColorStop(1,'rgba(0,0,0,0)');
+  const n2=g.createRadialGradient(W*.8,H*.75,0,W*.8,H*.75,W*.45); n2.addColorStop(0,'rgba(0,140,255,.22)'); n2.addColorStop(1,'rgba(0,0,0,0)');
+  g.fillStyle=n1; g.fillRect(0,0,W,H); g.fillStyle=n2; g.fillRect(0,0,W,H);
+  for(const s of stars){ s.z-=1.2; if(s.z<=1){ s.z=W; s.x=(Math.random()-.5)*W*2; s.y=(Math.random()-.5)*H*2; }
+    const k=W/s.z, x=W/2+s.x*k*.5+(mx>0?(mx-W/2)*.02:0), y=H/2+s.y*k*.5, r=Math.max(.3,(1-s.z/W)*2.4);
+    g.fillStyle=`rgba(255,255,255,${.4+.6*(1-s.z/W)})`; g.beginPath(); g.arc(x,y,r,0,6.3); g.fill(); }
+  const sh=(t*40)%260; if(sh<40){ g.strokeStyle=`rgba(255,255,255,${1-sh/40})`; g.lineWidth=2; g.beginPath(); g.moveTo(W*.7-sh*9,H*.1+sh*4); g.lineTo(W*.7-sh*9+70,H*.1+sh*4-30); g.stroke(); }
+}
+function floaters(){
+  g.textAlign='center'; g.textBaseline='middle';
+  for(const f of fl){ f.y-=f.v; if(f.y<-60){ f.y=H+60; f.x=Math.random()*W; }
+    const x=f.x+Math.sin(t*f.sw*3+f.ph)*28; g.save(); g.translate(x,f.y); g.rotate(Math.sin(t*2+f.ph)*.3);
+    g.globalAlpha=.85; g.font=f.sz+'px serif'; g.fillText(f.e,0,0); g.restore(); }
+}
+applyTheme();
+(function draw(){
+  if(!(W>0&&H>0)){ requestAnimationFrame(draw); return; }
+  t+=.012; g.clearRect(0,0,W,H); const T=th.theme;
+  if(T==='neo'||T==='light') neo();
+  else if(T==='space') space();
+  else if(T==='kawaii'||T==='emoji') floaters();
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
